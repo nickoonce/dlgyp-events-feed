@@ -2,7 +2,7 @@
 /**
  * Plugin Name: DLGYP Events
  * Description: Minimal events calendar with iCalendar (ICS) subscription feeds and single-event downloads.
- * Version: 1.1.12
+ * Version: 1.1.13
  * Author: DLGYP.ORG
  */
 
@@ -16,7 +16,7 @@ class Clamp_Events_iCal_Feed {
 	const TIMEZONE_ID    = 'America/Los_Angeles';
 	const REST_NAMESPACE = 'clamp-events/v1';
 	const REST_ROUTE     = '/feed';
-	const VERSION        = '1.1.12';
+	const VERSION        = '1.1.13';
 
 	/**
 	 * Plugin basename for action links.
@@ -139,6 +139,7 @@ class Clamp_Events_iCal_Feed {
 		$venue_address = get_post_meta( $post->ID, '_clamp_event_venue_address', true );
 		$event_url     = get_post_meta( $post->ID, '_clamp_event_url', true );
 		$nf_form_id    = get_post_meta( $post->ID, '_clamp_event_nf_form_id', true );
+		$spread        = get_post_meta( $post->ID, '_clamp_event_spread', true );
 
 		// Backward compatibility with old location meta key.
 		if ( '' === trim( (string) $venue_address ) ) {
@@ -239,6 +240,17 @@ class Clamp_Events_iCal_Feed {
 				value="<?php echo esc_attr( $event_url ); ?>"
 				style="width: 100%;"
 				placeholder="<?php esc_attr_e( 'https://example.com/event-page', 'clamp-events' ); ?>"
+			/>
+		</p>
+		<p>
+			<label for="clamp_event_spread"><strong><?php esc_html_e( 'Spread (Optional)', 'clamp-events' ); ?></strong></label><br />
+			<input
+				type="text"
+				id="clamp_event_spread"
+				name="clamp_event_spread"
+				value="<?php echo esc_attr( $spread ); ?>"
+				style="width: 100%;"
+				placeholder="<?php esc_attr_e( 'e.g. TBD or $25', 'clamp-events' ); ?>"
 			/>
 		</p>
 		<p>
@@ -544,6 +556,16 @@ class Clamp_Events_iCal_Feed {
 			}
 		}
 
+		// Spread (optional).
+		if ( isset( $_POST['clamp_event_spread'] ) ) {
+			$spread = sanitize_text_field( wp_unslash( $_POST['clamp_event_spread'] ) );
+			if ( '' !== $spread ) {
+				update_post_meta( $post_id, '_clamp_event_spread', $spread );
+			} else {
+				delete_post_meta( $post_id, '_clamp_event_spread' );
+			}
+		}
+
 		// Ninja Forms form ID (optional).
 		if ( isset( $_POST['clamp_event_nf_form_id'] ) ) {
 			$nf_form_id = absint( wp_unslash( $_POST['clamp_event_nf_form_id'] ) );
@@ -730,6 +752,7 @@ class Clamp_Events_iCal_Feed {
 					'venue_address' => $venue_address,
 					'event_url'   => $event_url,
 					'location'    => $venue_address,
+					'spread'      => get_post_meta( $post_id, '_clamp_event_spread', true ),
 					'nf_form_id'  => absint( get_post_meta( $post_id, '_clamp_event_nf_form_id', true ) ),
 					'ics_url'     => add_query_arg(
 						[ 'event_id' => $post_id ],
@@ -1478,6 +1501,7 @@ class Clamp_Events_iCal_Feed {
 			$venue_address = isset( $event['location'] ) ? $event['location'] : '';
 		}
 		$nf_form_id = isset( $event['nf_form_id'] ) ? absint( $event['nf_form_id'] ) : 0;
+		$spread     = isset( $event['spread'] ) ? $event['spread'] : '';
 
 		$tz       = new DateTimeZone( self::TIMEZONE_ID );
 		$dt_start = $this->parse_event_datetime( $start_raw, $tz );
@@ -1510,7 +1534,7 @@ class Clamp_Events_iCal_Feed {
 			$html .= '<tr><td>Date:</td><td><strong>' . esc_html( $dt_start->format( 'm/d/Y' ) ) . '</strong></td></tr>';
 		}
 		$html .= '<tr><td>Schedule:</td><td><strong>6 PM Libations &amp; Fraternization<br>7 PM Victuals</strong></td></tr>';
-		$html .= '<tr><td>Spread:</td><td><strong>TBD</strong></td></tr>';
+		$html .= '<tr><td>Spread:</td><td><strong>' . esc_html( '' !== trim( (string) $spread ) ? $spread : 'TBD' ) . '</strong></td></tr>';
 		$html .= '</tbody></table><br>';
 		$html .= '<h2 style="text-align: center;">Indenture of Supper &amp; Settlement</h2>';
 
