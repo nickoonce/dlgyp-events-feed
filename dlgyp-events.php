@@ -2,7 +2,7 @@
 /**
  * Plugin Name: DLGYP Events
  * Description: Minimal events calendar with iCalendar (ICS) subscription feeds and single-event downloads.
- * Version: 1.1.11
+ * Version: 1.1.12
  * Author: DLGYP.ORG
  */
 
@@ -16,7 +16,7 @@ class Clamp_Events_iCal_Feed {
 	const TIMEZONE_ID    = 'America/Los_Angeles';
 	const REST_NAMESPACE = 'clamp-events/v1';
 	const REST_ROUTE     = '/feed';
-	const VERSION        = '1.1.11';
+	const VERSION        = '1.1.12';
 
 	/**
 	 * Plugin basename for action links.
@@ -1433,7 +1433,7 @@ class Clamp_Events_iCal_Feed {
 
 		$cache_key = 'clamp_next_bastardos_v1_' . md5( $api_url );
 		$cached    = get_transient( $cache_key );
-		if ( false !== $cached ) {
+		if ( is_array( $cached ) ) {
 			// Append the NF form fresh on every request so NF can enqueue its scripts.
 			$nf_form_id = absint( $cached['nf_form_id'] );
 			$html       = $cached['html'];
