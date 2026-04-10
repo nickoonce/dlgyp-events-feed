@@ -2,7 +2,7 @@
 /**
  * Plugin Name: DLGYP Events
  * Description: Minimal events calendar with iCalendar (ICS) subscription feeds and single-event downloads.
- * Version: 1.1.10
+ * Version: 1.1.11
  * Author: DLGYP.ORG
  */
 
@@ -16,7 +16,7 @@ class Clamp_Events_iCal_Feed {
 	const TIMEZONE_ID    = 'America/Los_Angeles';
 	const REST_NAMESPACE = 'clamp-events/v1';
 	const REST_ROUTE     = '/feed';
-	const VERSION        = '1.1.10';
+	const VERSION        = '1.1.11';
 
 	/**
 	 * Plugin basename for action links.
@@ -1434,7 +1434,14 @@ class Clamp_Events_iCal_Feed {
 		$cache_key = 'clamp_next_bastardos_v1_' . md5( $api_url );
 		$cached    = get_transient( $cache_key );
 		if ( false !== $cached ) {
-			return $cached;
+			// Append the NF form fresh on every request so NF can enqueue its scripts.
+			$nf_form_id = absint( $cached['nf_form_id'] );
+			$html       = $cached['html'];
+			if ( $nf_form_id > 0 ) {
+				$html .= '<div class="clamp-event-form">' . do_shortcode( '[ninja_form id=' . $nf_form_id . ']' ) . '</div>';
+			}
+			$html .= '</div>';
+			return $html;
 		}
 
 		$response = wp_remote_get(
@@ -1456,7 +1463,7 @@ class Clamp_Events_iCal_Feed {
 
 		if ( ! is_array( $events ) || empty( $events ) ) {
 			$html = '<div class="next-bastardos-event clamp-events-empty">' . esc_html__( 'No upcoming Bastardos events found.', 'clamp-events' ) . '</div>';
-			set_transient( $cache_key, $html, 5 * MINUTE_IN_SECONDS );
+			set_transient( $cache_key, [ 'html' => $html, 'nf_form_id' => 0 ], 5 * MINUTE_IN_SECONDS );
 			return $html;
 		}
 
@@ -1488,12 +1495,13 @@ class Clamp_Events_iCal_Feed {
 			}
 		}
 
+		// Build the cacheable portion (everything except the NF form and closing div).
 		$html  = '<div class="next-bastardos-event">';
 		$html .= '<table class="table table-bordered dlgyp-particulars"';
 		$html .= ' style="color: rgb(0, 0, 0); font-size: 16px;">';
 		$html .= '<tbody>';
 		$html .= '<tr><td>Occasion:</td><td><strong>' . esc_html( $title ) . '</strong></td></tr>';
-		
+
 		$venue_html = $this->get_venue_display_html( $venue_name, $venue_address );
 		if ( '' !== $venue_html ) {
 			$html .= '<tr><td>Location:</td><td><strong>' . $venue_html . '</strong></td></tr>';
@@ -1506,13 +1514,14 @@ class Clamp_Events_iCal_Feed {
 		$html .= '</tbody></table><br>';
 		$html .= '<h2 style="text-align: center;">Indenture of Supper &amp; Settlement</h2>';
 
+		// Cache without the NF form so it can be rendered fresh each request.
+		set_transient( $cache_key, [ 'html' => $html, 'nf_form_id' => $nf_form_id ], 15 * MINUTE_IN_SECONDS );
+
 		if ( $nf_form_id > 0 ) {
 			$html .= '<div class="clamp-event-form">' . do_shortcode( '[ninja_form id=' . $nf_form_id . ']' ) . '</div>';
 		}
 
 		$html .= '</div>';
-
-		set_transient( $cache_key, $html, 15 * MINUTE_IN_SECONDS );
 
 		return $html;
 	}
