@@ -1,8 +1,8 @@
 <?php
 /**
- * Plugin Name: DLGYP ICS Feed
+ * Plugin Name: DLGYP Events
  * Description: Minimal events calendar with iCalendar (ICS) subscription feeds and single-event downloads.
- * Version: 1.1.7
+ * Version: 1.1.8
  * Author: DLGYP.ORG
  */
 
@@ -16,7 +16,7 @@ class Clamp_Events_iCal_Feed {
 	const TIMEZONE_ID    = 'America/Los_Angeles';
 	const REST_NAMESPACE = 'clamp-events/v1';
 	const REST_ROUTE     = '/feed';
-	const VERSION        = '1.1.7';
+	const VERSION        = '1.1.8';
 
 	/**
 	 * Plugin basename for action links.
