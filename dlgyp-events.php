@@ -2,7 +2,7 @@
 /**
  * Plugin Name: DLGYP Events
  * Description: Minimal events calendar with iCalendar (ICS) subscription feeds and single-event downloads.
- * Version: 1.1.8
+ * Version: 1.1.9
  * Author: DLGYP.ORG
  */
 
@@ -16,7 +16,7 @@ class Clamp_Events_iCal_Feed {
 	const TIMEZONE_ID    = 'America/Los_Angeles';
 	const REST_NAMESPACE = 'clamp-events/v1';
 	const REST_ROUTE     = '/feed';
-	const VERSION        = '1.1.8';
+	const VERSION        = '1.1.9';
 
 	/**
 	 * Plugin basename for action links.
@@ -52,6 +52,7 @@ class Clamp_Events_iCal_Feed {
 		// Shortcode.
 		add_shortcode( 'clamp_events_list', [ $this, 'shortcode_events_list' ] );
 		add_shortcode( 'clamp_events_remote', [ $this, 'shortcode_events_remote' ] );
+		add_shortcode( 'next_bastardos_event', [ $this, 'shortcode_next_bastardos_event' ] );
 
 		// Admin menu & Info page.
 		add_action( 'admin_menu', [ $this, 'register_admin_page' ] );
@@ -137,6 +138,7 @@ class Clamp_Events_iCal_Feed {
 		$venue_name    = get_post_meta( $post->ID, '_clamp_event_venue_name', true );
 		$venue_address = get_post_meta( $post->ID, '_clamp_event_venue_address', true );
 		$event_url     = get_post_meta( $post->ID, '_clamp_event_url', true );
+		$nf_form_id    = get_post_meta( $post->ID, '_clamp_event_nf_form_id', true );
 
 		// Backward compatibility with old location meta key.
 		if ( '' === trim( (string) $venue_address ) ) {
@@ -238,6 +240,19 @@ class Clamp_Events_iCal_Feed {
 				style="width: 100%;"
 				placeholder="<?php esc_attr_e( 'https://example.com/event-page', 'clamp-events' ); ?>"
 			/>
+		</p>
+		<p>
+			<label for="clamp_event_nf_form_id"><strong><?php esc_html_e( 'Ninja Forms Form ID (Optional)', 'clamp-events' ); ?></strong></label><br />
+			<input
+				type="number"
+				id="clamp_event_nf_form_id"
+				name="clamp_event_nf_form_id"
+				value="<?php echo esc_attr( $nf_form_id ); ?>"
+				style="max-width: 120px;"
+				min="1"
+				placeholder="<?php esc_attr_e( 'e.g. 3', 'clamp-events' ); ?>"
+			/>
+			<span class="description"><?php esc_html_e( 'Enter the Ninja Forms form ID to embed a form on this event.', 'clamp-events' ); ?></span>
 		</p>
 		<script>
 		(function () {
@@ -528,6 +543,17 @@ class Clamp_Events_iCal_Feed {
 				delete_post_meta( $post_id, '_clamp_event_url' );
 			}
 		}
+
+		// Ninja Forms form ID (optional).
+		if ( isset( $_POST['clamp_event_nf_form_id'] ) ) {
+			$nf_form_id = absint( wp_unslash( $_POST['clamp_event_nf_form_id'] ) );
+
+			if ( $nf_form_id > 0 ) {
+				update_post_meta( $post_id, '_clamp_event_nf_form_id', $nf_form_id );
+			} else {
+				delete_post_meta( $post_id, '_clamp_event_nf_form_id' );
+			}
+		}
 	}
 
 	/**
@@ -704,6 +730,7 @@ class Clamp_Events_iCal_Feed {
 					'venue_address' => $venue_address,
 					'event_url'   => $event_url,
 					'location'    => $venue_address,
+					'nf_form_id'  => absint( get_post_meta( $post_id, '_clamp_event_nf_form_id', true ) ),
 					'ics_url'     => add_query_arg(
 						[ 'event_id' => $post_id ],
 						rest_url( self::REST_NAMESPACE . self::REST_ROUTE )
@@ -1382,6 +1409,104 @@ class Clamp_Events_iCal_Feed {
 		$html .= '</ul><center><i>Events Subject to Change</i><br>';
 		$html .= '<a href="https://bastardos.dlgyp.org/wp-json/clamp-events/v1/feed?name=ECV%201.5%20Events">Subscribe ';
         $html .= 'to this Calendar</a></center></div>';
+
+		return $html;
+	}
+
+	/**
+	 * Shortcode handler for [next_bastardos_event].
+	 *
+	 * Fetches the next upcoming Bastardos event from dlgyp.org via REST API
+	 * and displays the title, date, venue name, venue address, and Ninja Forms
+	 * form (if a form ID is set on the event).
+	 */
+	public function shortcode_next_bastardos_event( $atts ) {
+		$source_url = 'https://dlgyp.org';
+
+		$api_url = add_query_arg(
+			[
+				'category' => 'bastardos',
+				'limit'    => 1,
+			],
+			trailingslashit( $source_url ) . 'wp-json/' . self::REST_NAMESPACE . '/events'
+		);
+
+		$cache_key = 'clamp_next_bastardos_v1_' . md5( $api_url );
+		$cached    = get_transient( $cache_key );
+		if ( false !== $cached ) {
+			return $cached;
+		}
+
+		$response = wp_remote_get(
+			$api_url,
+			[
+				'timeout' => 10,
+				'headers' => [ 'Accept' => 'application/json' ],
+			]
+		);
+
+		if ( is_wp_error( $response ) ) {
+			return '<div class="next-bastardos-event clamp-events-error">' .
+			       esc_html__( 'Error fetching events: ', 'clamp-events' ) .
+			       esc_html( $response->get_error_message() ) .
+			       '</div>';
+		}
+
+		$events = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		if ( ! is_array( $events ) || empty( $events ) ) {
+			$html = '<div class="next-bastardos-event clamp-events-empty">' . esc_html__( 'No upcoming Bastardos events found.', 'clamp-events' ) . '</div>';
+			set_transient( $cache_key, $html, 5 * MINUTE_IN_SECONDS );
+			return $html;
+		}
+
+		$event         = $events[0];
+		$title         = isset( $event['title'] ) ? $event['title'] : '';
+		$start_raw     = isset( $event['start'] ) ? $event['start'] : '';
+		$end_raw       = isset( $event['end'] ) ? $event['end'] : '';
+		$time_text     = isset( $event['time_text'] ) ? $event['time_text'] : '';
+		$venue_name    = isset( $event['venue_name'] ) ? $event['venue_name'] : '';
+		$venue_address = isset( $event['venue_address'] ) ? $event['venue_address'] : '';
+		if ( '' === trim( (string) $venue_address ) ) {
+			$venue_address = isset( $event['location'] ) ? $event['location'] : '';
+		}
+		$nf_form_id = isset( $event['nf_form_id'] ) ? absint( $event['nf_form_id'] ) : 0;
+
+		$tz       = new DateTimeZone( self::TIMEZONE_ID );
+		$dt_start = $this->parse_event_datetime( $start_raw, $tz );
+		$dt_end   = $this->parse_event_datetime( $end_raw, $tz );
+
+		$datetime_str = '';
+		if ( $dt_start ) {
+			if ( $dt_end && $dt_start->format( 'Ymd' ) !== $dt_end->format( 'Ymd' ) ) {
+				$datetime_str = $dt_start->format( 'm/d/Y' ) . ' - ' . $dt_end->format( 'm/d/Y' );
+			} else {
+				$datetime_str = $dt_start->format( 'm/d/Y' );
+				if ( '' !== trim( (string) $time_text ) ) {
+					$datetime_str .= ', ' . trim( (string) $time_text );
+				}
+			}
+		}
+
+		$html  = '<div class="next-bastardos-event">';
+		$html .= '<div class="clamp-event-title"><strong>' . esc_html( $title ) . '</strong></div>';
+
+		if ( '' !== $datetime_str ) {
+			$html .= '<div class="clamp-event-datetime">' . esc_html( $datetime_str ) . '</div>';
+		}
+
+		$venue_html = $this->get_venue_display_html( $venue_name, $venue_address );
+		if ( '' !== $venue_html ) {
+			$html .= '<div class="clamp-event-location">' . $venue_html . '</div>';
+		}
+
+		if ( $nf_form_id > 0 ) {
+			$html .= '<div class="clamp-event-form">' . do_shortcode( '[ninja_form id=' . $nf_form_id . ']' ) . '</div>';
+		}
+
+		$html .= '</div>';
+
+		set_transient( $cache_key, $html, 15 * MINUTE_IN_SECONDS );
 
 		return $html;
 	}
