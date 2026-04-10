@@ -2,7 +2,7 @@
 /**
  * Plugin Name: DLGYP Events
  * Description: Minimal events calendar with iCalendar (ICS) subscription feeds and single-event downloads.
- * Version: 1.1.9
+ * Version: 1.1.10
  * Author: DLGYP.ORG
  */
 
@@ -16,7 +16,7 @@ class Clamp_Events_iCal_Feed {
 	const TIMEZONE_ID    = 'America/Los_Angeles';
 	const REST_NAMESPACE = 'clamp-events/v1';
 	const REST_ROUTE     = '/feed';
-	const VERSION        = '1.1.9';
+	const VERSION        = '1.1.10';
 
 	/**
 	 * Plugin basename for action links.
@@ -1489,16 +1489,22 @@ class Clamp_Events_iCal_Feed {
 		}
 
 		$html  = '<div class="next-bastardos-event">';
-		$html .= '<div class="clamp-event-title"><strong>' . esc_html( $title ) . '</strong></div>';
-
-		if ( '' !== $datetime_str ) {
-			$html .= '<div class="clamp-event-datetime">' . esc_html( $datetime_str ) . '</div>';
-		}
-
+		$html .= '<table class="table table-bordered dlgyp-particulars"';
+		$html .= ' style="color: rgb(0, 0, 0); font-size: 16px;">';
+		$html .= '<tbody>';
+		$html .= '<tr><td>Occasion:</td><td><strong>' . esc_html( $title ) . '</strong></td></tr>';
+		
 		$venue_html = $this->get_venue_display_html( $venue_name, $venue_address );
 		if ( '' !== $venue_html ) {
-			$html .= '<div class="clamp-event-location">' . $venue_html . '</div>';
+			$html .= '<tr><td>Location:</td><td><strong>' . $venue_html . '</strong></td></tr>';
 		}
+		if ( $dt_start ) {
+			$html .= '<tr><td>Date:</td><td><strong>' . esc_html( $dt_start->format( 'm/d/Y' ) ) . '</strong></td></tr>';
+		}
+		$html .= '<tr><td>Schedule:</td><td><strong>6 PM Libations &amp; Fraternization<br>7 PM Victuals</strong></td></tr>';
+		$html .= '<tr><td>Spread:</td><td><strong>TBD</strong></td></tr>';
+		$html .= '</tbody></table><br>';
+		$html .= '<h2 style="text-align: center;">Indenture of Supper &amp; Settlement</h2>';
 
 		if ( $nf_form_id > 0 ) {
 			$html .= '<div class="clamp-event-form">' . do_shortcode( '[ninja_form id=' . $nf_form_id . ']' ) . '</div>';
