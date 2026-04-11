@@ -2,7 +2,7 @@
 /**
  * Plugin Name: DLGYP Events
  * Description: Minimal events calendar with iCalendar (ICS) subscription feeds and single-event downloads.
- * Version: 1.1.14
+ * Version: 1.1.15
  * Author: DLGYP.ORG
  */
 
@@ -16,7 +16,7 @@ class Clamp_Events_iCal_Feed {
 	const TIMEZONE_ID    = 'America/Los_Angeles';
 	const REST_NAMESPACE = 'clamp-events/v1';
 	const REST_ROUTE     = '/feed';
-	const VERSION        = '1.1.14';
+	const VERSION        = '1.1.15';
 
 	/**
 	 * Plugin basename for action links.
@@ -1468,6 +1468,9 @@ class Clamp_Events_iCal_Feed {
 			$nf_form_id = absint( $cached['nf_form_id'] );
 			$html       = $cached['html'];
 			if ( $nf_form_id > 0 ) {
+				$GLOBALS['dlgyp_next_bastardos_nf_form_id'] = $nf_form_id;
+			}
+			if ( $nf_form_id > 0 ) {
 				$html .= '<div class="clamp-event-form">' . do_shortcode( '[ninja_form id=' . $nf_form_id . ']' ) . '</div>';
 			}
 			$html .= '</div>';
@@ -1508,6 +1511,9 @@ class Clamp_Events_iCal_Feed {
 			$venue_address = isset( $event['location'] ) ? $event['location'] : '';
 		}
 		$nf_form_id = isset( $event['nf_form_id'] ) ? absint( $event['nf_form_id'] ) : 0;
+		if ( $nf_form_id > 0 ) {
+   	 		$GLOBALS['dlgyp_next_bastardos_nf_form_id'] = $nf_form_id;
+		}
 		$spread     = isset( $event['spread'] ) ? $event['spread'] : '';
 
 		$tz       = new DateTimeZone( self::TIMEZONE_ID );
