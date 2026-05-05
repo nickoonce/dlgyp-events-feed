@@ -2,7 +2,7 @@
 /**
  * Plugin Name: DLGYP Events
  * Description: Minimal events calendar with iCalendar (ICS) subscription feeds and single-event downloads.
- * Version: 1.1.15
+ * Version: 1.1.16
  * Author: DLGYP.ORG
  */
 
@@ -16,7 +16,7 @@ class Clamp_Events_iCal_Feed {
 	const TIMEZONE_ID    = 'America/Los_Angeles';
 	const REST_NAMESPACE = 'clamp-events/v1';
 	const REST_ROUTE     = '/feed';
-	const VERSION        = '1.1.15';
+	const VERSION        = '1.1.16';
 
 	/**
 	 * Plugin basename for action links.
@@ -138,6 +138,7 @@ class Clamp_Events_iCal_Feed {
 		$venue_name    = get_post_meta( $post->ID, '_clamp_event_venue_name', true );
 		$venue_address = get_post_meta( $post->ID, '_clamp_event_venue_address', true );
 		$event_url     = get_post_meta( $post->ID, '_clamp_event_url', true );
+		$image_url     = get_post_meta( $post->ID, '_clamp_event_image_url', true );
 		$nf_form_id    = get_post_meta( $post->ID, '_clamp_event_nf_form_id', true );
 		$spread        = get_post_meta( $post->ID, '_clamp_event_spread', true );
 
@@ -240,6 +241,17 @@ class Clamp_Events_iCal_Feed {
 				value="<?php echo esc_attr( $event_url ); ?>"
 				style="width: 100%;"
 				placeholder="<?php esc_attr_e( 'https://example.com/event-page', 'clamp-events' ); ?>"
+			/>
+		</p>
+		<p>
+			<label for="clamp_event_image_url"><strong><?php esc_html_e( 'Image URL (Optional)', 'clamp-events' ); ?></strong></label><br />
+			<input
+				type="url"
+				id="clamp_event_image_url"
+				name="clamp_event_image_url"
+				value="<?php echo esc_attr( $image_url ); ?>"
+				style="width: 100%;"
+				placeholder="<?php esc_attr_e( 'https://example.com/event-image.jpg', 'clamp-events' ); ?>"
 			/>
 		</p>
 		<p>
@@ -556,6 +568,17 @@ class Clamp_Events_iCal_Feed {
 			}
 		}
 
+		// Event image URL.
+		if ( isset( $_POST['clamp_event_image_url'] ) ) {
+			$image_url = esc_url_raw( trim( (string) wp_unslash( $_POST['clamp_event_image_url'] ) ) );
+
+			if ( '' !== $image_url ) {
+				update_post_meta( $post_id, '_clamp_event_image_url', $image_url );
+			} else {
+				delete_post_meta( $post_id, '_clamp_event_image_url' );
+			}
+		}
+
 		// Spread (optional).
 		if ( isset( $_POST['clamp_event_spread'] ) ) {
 			$spread = sanitize_text_field( wp_unslash( $_POST['clamp_event_spread'] ) );
@@ -729,6 +752,7 @@ class Clamp_Events_iCal_Feed {
 				$venue_name     = get_post_meta( $post_id, '_clamp_event_venue_name', true );
 				$venue_address  = get_post_meta( $post_id, '_clamp_event_venue_address', true );
 				$event_url      = get_post_meta( $post_id, '_clamp_event_url', true );
+				$image_url      = get_post_meta( $post_id, '_clamp_event_image_url', true );
 				$time_text      = get_post_meta( $post_id, '_clamp_event_time_text', true );
 				if ( '' === trim( (string) $venue_address ) ) {
 					$venue_address = get_post_meta( $post_id, '_clamp_event_location', true );
@@ -751,6 +775,7 @@ class Clamp_Events_iCal_Feed {
 					'venue_name'  => $venue_name,
 					'venue_address' => $venue_address,
 					'event_url'   => $event_url,
+					'image_url'   => $image_url,
 					'location'    => $venue_address,
 					'spread'      => get_post_meta( $post_id, '_clamp_event_spread', true ),
 					'nf_form_id'  => absint( get_post_meta( $post_id, '_clamp_event_nf_form_id', true ) ),
@@ -1466,9 +1491,13 @@ class Clamp_Events_iCal_Feed {
 		if ( is_array( $cached ) ) {
 			// Append the NF form fresh on every request so NF can enqueue its scripts.
 			$nf_form_id = absint( $cached['nf_form_id'] );
+			$image_url  = isset( $cached['image_url'] ) ? esc_url_raw( (string) $cached['image_url'] ) : '';
 			$html       = $cached['html'];
 			if ( $nf_form_id > 0 ) {
 				$GLOBALS['dlgyp_next_bastardos_nf_form_id'] = $nf_form_id;
+			}
+			if ( '' !== $image_url ) {
+				$html .= '<div class="clamp-event-image" style="text-align: center; margin: 0 0 20px;"><img src="' . esc_url( $image_url ) . '" alt="' . esc_attr__( 'Event image', 'clamp-events' ) . '" style="max-width: 100%; height: auto; display: inline-block;" /></div>';
 			}
 			if ( $nf_form_id > 0 ) {
 				$html .= '<div class="clamp-event-form">' . do_shortcode( '[ninja_form id=' . $nf_form_id . ']' ) . '</div>';
@@ -1514,6 +1543,7 @@ class Clamp_Events_iCal_Feed {
 		if ( $nf_form_id > 0 ) {
    	 		$GLOBALS['dlgyp_next_bastardos_nf_form_id'] = $nf_form_id;
 		}
+		$image_url  = isset( $event['image_url'] ) ? esc_url_raw( (string) $event['image_url'] ) : '';
 		$spread     = isset( $event['spread'] ) ? $event['spread'] : '';
 
 		$tz       = new DateTimeZone( self::TIMEZONE_ID );
@@ -1534,6 +1564,7 @@ class Clamp_Events_iCal_Feed {
 
 		// Build the cacheable portion (everything except the NF form and closing div).
 		$html  = '<div class="next-bastardos-event">';
+		$html .= '<h2 style="text-align: center;">Indenture of Supper &amp; Settlement</h2>';
 		$html .= '<table class="table table-bordered dlgyp-particulars"';
 		$html .= ' style="color: rgb(0, 0, 0); font-size: 16px;">';
 		$html .= '<tbody>';
@@ -1549,11 +1580,13 @@ class Clamp_Events_iCal_Feed {
 		$html .= '<tr><td>Schedule:</td><td><strong>6 PM Libations &amp; Fraternization<br>7 PM Victuals</strong></td></tr>';
 		$html .= '<tr><td>Spread:</td><td><strong>' . esc_html( '' !== trim( (string) $spread ) ? $spread : 'TBD' ) . '</strong></td></tr>';
 		$html .= '</tbody></table><br>';
-		$html .= '<h2 style="text-align: center;">Indenture of Supper &amp; Settlement</h2>';
-
+		
 		// Cache without the NF form so it can be rendered fresh each request.
-		set_transient( $cache_key, [ 'html' => $html, 'nf_form_id' => $nf_form_id ], 15 * MINUTE_IN_SECONDS );
+		set_transient( $cache_key, [ 'html' => $html, 'nf_form_id' => $nf_form_id, 'image_url' => $image_url ], 15 * MINUTE_IN_SECONDS );
 
+		if ( '' !== $image_url ) {
+			$html .= '<div class="clamp-event-image" style="text-align: center; margin: 0 0 20px;"><img src="' . esc_url( $image_url ) . '" alt="' . esc_attr__( 'Event image', 'clamp-events' ) . '" style="max-width: 100%; height: auto; display: inline-block;" /></div>';
+		}
 		if ( $nf_form_id > 0 ) {
 			$html .= '<div class="clamp-event-form">' . do_shortcode( '[ninja_form id=' . $nf_form_id . ']' ) . '</div>';
 		}
