@@ -2,7 +2,7 @@
 /**
  * Plugin Name: DLGYP Events
  * Description: Minimal events calendar with iCalendar (ICS) subscription feeds and single-event downloads.
- * Version: 1.1.16
+ * Version: 1.1.17
  * Author: DLGYP.ORG
  */
 
@@ -16,7 +16,7 @@ class Clamp_Events_iCal_Feed {
 	const TIMEZONE_ID    = 'America/Los_Angeles';
 	const REST_NAMESPACE = 'clamp-events/v1';
 	const REST_ROUTE     = '/feed';
-	const VERSION        = '1.1.16';
+	const VERSION        = '1.1.17';
 
 	/**
 	 * Plugin basename for action links.
@@ -1564,7 +1564,7 @@ class Clamp_Events_iCal_Feed {
 
 		// Build the cacheable portion (everything except the NF form and closing div).
 		$html  = '<div class="next-bastardos-event">';
-		$html .= '<h2 style="text-align: center;">Indenture of Supper &amp; Settlement</h2>';
+		$html .= '<h2 style="text-align: center;">Timely Particulars</h2>';
 		$html .= '<table class="table table-bordered dlgyp-particulars"';
 		$html .= ' style="color: rgb(0, 0, 0); font-size: 16px;">';
 		$html .= '<tbody>';
@@ -1587,6 +1587,7 @@ class Clamp_Events_iCal_Feed {
 		if ( '' !== $image_url ) {
 			$html .= '<div class="clamp-event-image" style="text-align: center; margin: 0 0 20px;"><img src="' . esc_url( $image_url ) . '" alt="' . esc_attr__( 'Event image', 'clamp-events' ) . '" style="max-width: 100%; height: auto; display: inline-block;" /></div>';
 		}
+		$html .= '<h2 style="text-align: center;">Indenture of Supper &amp; Settlement</h2>';
 		if ( $nf_form_id > 0 ) {
 			$html .= '<div class="clamp-event-form">' . do_shortcode( '[ninja_form id=' . $nf_form_id . ']' ) . '</div>';
 		}
