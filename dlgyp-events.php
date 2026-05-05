@@ -2,7 +2,7 @@
 /**
  * Plugin Name: DLGYP Events
  * Description: Minimal events calendar with iCalendar (ICS) subscription feeds and single-event downloads.
- * Version: 1.1.17
+ * Version: 1.1.18
  * Author: DLGYP.ORG
  */
 
@@ -16,7 +16,7 @@ class Clamp_Events_iCal_Feed {
 	const TIMEZONE_ID    = 'America/Los_Angeles';
 	const REST_NAMESPACE = 'clamp-events/v1';
 	const REST_ROUTE     = '/feed';
-	const VERSION        = '1.1.17';
+	const VERSION        = '1.1.18';
 
 	/**
 	 * Plugin basename for action links.
@@ -1577,7 +1577,7 @@ class Clamp_Events_iCal_Feed {
 		if ( $dt_start ) {
 			$html .= '<tr><td>Date:</td><td><strong>' . esc_html( $dt_start->format( 'm/d/Y' ) ) . '</strong></td></tr>';
 		}
-		$html .= '<tr><td>Schedule:</td><td><strong>6 PM Libations &amp; Fraternization<br>7 PM Victuals</strong></td></tr>';
+		$html .= '<tr><td>Schedule:</td><td><strong>6 PM Libations &amp; Fraternization<br>7 PM Victuals &amp; Formalities</strong></td></tr>';
 		$html .= '<tr><td>Spread:</td><td><strong>' . esc_html( '' !== trim( (string) $spread ) ? $spread : 'TBD' ) . '</strong></td></tr>';
 		$html .= '</tbody></table><br>';
 		
