@@ -2,7 +2,7 @@
 /**
  * Plugin Name: DLGYP Events
  * Description: Minimal events calendar with iCalendar (ICS) subscription feeds and single-event downloads.
- * Version: 1.1.18
+ * Version: 1.1.19
  * Author: DLGYP.ORG
  */
 
@@ -16,7 +16,7 @@ class Clamp_Events_iCal_Feed {
 	const TIMEZONE_ID    = 'America/Los_Angeles';
 	const REST_NAMESPACE = 'clamp-events/v1';
 	const REST_ROUTE     = '/feed';
-	const VERSION        = '1.1.18';
+	const VERSION        = '1.1.19';
 
 	/**
 	 * Plugin basename for action links.
@@ -139,6 +139,7 @@ class Clamp_Events_iCal_Feed {
 		$venue_address = get_post_meta( $post->ID, '_clamp_event_venue_address', true );
 		$event_url     = get_post_meta( $post->ID, '_clamp_event_url', true );
 		$image_url     = get_post_meta( $post->ID, '_clamp_event_image_url', true );
+		$image_caption = get_post_meta( $post->ID, '_clamp_event_image_caption', true );
 		$nf_form_id    = get_post_meta( $post->ID, '_clamp_event_nf_form_id', true );
 		$spread        = get_post_meta( $post->ID, '_clamp_event_spread', true );
 
@@ -252,6 +253,17 @@ class Clamp_Events_iCal_Feed {
 				value="<?php echo esc_attr( $image_url ); ?>"
 				style="width: 100%;"
 				placeholder="<?php esc_attr_e( 'https://example.com/event-image.jpg', 'clamp-events' ); ?>"
+			/>
+		</p>
+		<p>
+			<label for="clamp_event_image_caption"><strong><?php esc_html_e( 'Image Caption (Optional)', 'clamp-events' ); ?></strong></label><br />
+			<input
+				type="text"
+				id="clamp_event_image_caption"
+				name="clamp_event_image_caption"
+				value="<?php echo esc_attr( $image_caption ); ?>"
+				style="width: 100%;"
+				placeholder="<?php esc_attr_e( 'Caption shown under the event image', 'clamp-events' ); ?>"
 			/>
 		</p>
 		<p>
@@ -472,6 +484,21 @@ class Clamp_Events_iCal_Feed {
 	}
 
 	/**
+	 * Return one-time inline CSS used by the next Bastardos event caption.
+	 */
+	private function get_next_bastardos_caption_css() {
+		static $printed = false;
+
+		if ( $printed ) {
+			return '';
+		}
+
+		$printed = true;
+
+		return '<style>.next-bastardos-event .clamp-event-image-caption{text-align:center;margin:-12px 0 20px;font-size:14px;line-height:1.4;}</style>';
+	}
+
+	/**
 	 * Save event meta (start/end, venue name/address).
 	 */
 	public function save_event_meta( $post_id ) {
@@ -576,6 +603,17 @@ class Clamp_Events_iCal_Feed {
 				update_post_meta( $post_id, '_clamp_event_image_url', $image_url );
 			} else {
 				delete_post_meta( $post_id, '_clamp_event_image_url' );
+			}
+		}
+
+		// Event image caption.
+		if ( isset( $_POST['clamp_event_image_caption'] ) ) {
+			$image_caption = sanitize_text_field( wp_unslash( $_POST['clamp_event_image_caption'] ) );
+
+			if ( '' !== $image_caption ) {
+				update_post_meta( $post_id, '_clamp_event_image_caption', $image_caption );
+			} else {
+				delete_post_meta( $post_id, '_clamp_event_image_caption' );
 			}
 		}
 
@@ -753,6 +791,7 @@ class Clamp_Events_iCal_Feed {
 				$venue_address  = get_post_meta( $post_id, '_clamp_event_venue_address', true );
 				$event_url      = get_post_meta( $post_id, '_clamp_event_url', true );
 				$image_url      = get_post_meta( $post_id, '_clamp_event_image_url', true );
+				$image_caption  = get_post_meta( $post_id, '_clamp_event_image_caption', true );
 				$time_text      = get_post_meta( $post_id, '_clamp_event_time_text', true );
 				if ( '' === trim( (string) $venue_address ) ) {
 					$venue_address = get_post_meta( $post_id, '_clamp_event_location', true );
@@ -776,6 +815,7 @@ class Clamp_Events_iCal_Feed {
 					'venue_address' => $venue_address,
 					'event_url'   => $event_url,
 					'image_url'   => $image_url,
+					'image_caption' => $image_caption,
 					'location'    => $venue_address,
 					'spread'      => get_post_meta( $post_id, '_clamp_event_spread', true ),
 					'nf_form_id'  => absint( get_post_meta( $post_id, '_clamp_event_nf_form_id', true ) ),
@@ -1477,6 +1517,7 @@ class Clamp_Events_iCal_Feed {
 	 */
 	public function shortcode_next_bastardos_event( $atts ) {
 		$source_url = 'https://dlgyp.org';
+		$caption_css = $this->get_next_bastardos_caption_css();
 
 		$api_url = add_query_arg(
 			[
@@ -1492,18 +1533,23 @@ class Clamp_Events_iCal_Feed {
 			// Append the NF form fresh on every request so NF can enqueue its scripts.
 			$nf_form_id = absint( $cached['nf_form_id'] );
 			$image_url  = isset( $cached['image_url'] ) ? esc_url_raw( (string) $cached['image_url'] ) : '';
+			$image_caption = isset( $cached['image_caption'] ) ? sanitize_text_field( (string) $cached['image_caption'] ) : '';
 			$html       = $cached['html'];
 			if ( $nf_form_id > 0 ) {
 				$GLOBALS['dlgyp_next_bastardos_nf_form_id'] = $nf_form_id;
 			}
 			if ( '' !== $image_url ) {
 				$html .= '<div class="clamp-event-image" style="text-align: center; margin: 0 0 20px;"><img src="' . esc_url( $image_url ) . '" alt="' . esc_attr__( 'Event image', 'clamp-events' ) . '" style="max-width: 100%; height: auto; display: inline-block;" /></div>';
+				if ( '' !== trim( (string) $image_caption ) ) {
+					$html .= '<div class="clamp-event-image-caption">' . esc_html( $image_caption ) . '</div>';
+				}
 			}
+			$html .= '<h2 style="text-align: center;">Indenture of Supper &amp; Settlement</h2>';
 			if ( $nf_form_id > 0 ) {
 				$html .= '<div class="clamp-event-form">' . do_shortcode( '[ninja_form id=' . $nf_form_id . ']' ) . '</div>';
 			}
 			$html .= '</div>';
-			return $html;
+			return $caption_css . $html;
 		}
 
 		$response = wp_remote_get(
@@ -1515,7 +1561,7 @@ class Clamp_Events_iCal_Feed {
 		);
 
 		if ( is_wp_error( $response ) ) {
-			return '<div class="next-bastardos-event clamp-events-error">' .
+			return $caption_css . '<div class="next-bastardos-event clamp-events-error">' .
 			       esc_html__( 'Error fetching events: ', 'clamp-events' ) .
 			       esc_html( $response->get_error_message() ) .
 			       '</div>';
@@ -1526,7 +1572,7 @@ class Clamp_Events_iCal_Feed {
 		if ( ! is_array( $events ) || empty( $events ) ) {
 			$html = '<div class="next-bastardos-event clamp-events-empty">' . esc_html__( 'No upcoming Bastardos events found.', 'clamp-events' ) . '</div>';
 			set_transient( $cache_key, [ 'html' => $html, 'nf_form_id' => 0 ], 5 * MINUTE_IN_SECONDS );
-			return $html;
+			return $caption_css . $html;
 		}
 
 		$event         = $events[0];
@@ -1544,6 +1590,7 @@ class Clamp_Events_iCal_Feed {
    	 		$GLOBALS['dlgyp_next_bastardos_nf_form_id'] = $nf_form_id;
 		}
 		$image_url  = isset( $event['image_url'] ) ? esc_url_raw( (string) $event['image_url'] ) : '';
+		$image_caption = isset( $event['image_caption'] ) ? sanitize_text_field( (string) $event['image_caption'] ) : '';
 		$spread     = isset( $event['spread'] ) ? $event['spread'] : '';
 
 		$tz       = new DateTimeZone( self::TIMEZONE_ID );
@@ -1582,10 +1629,13 @@ class Clamp_Events_iCal_Feed {
 		$html .= '</tbody></table><br>';
 		
 		// Cache without the NF form so it can be rendered fresh each request.
-		set_transient( $cache_key, [ 'html' => $html, 'nf_form_id' => $nf_form_id, 'image_url' => $image_url ], 15 * MINUTE_IN_SECONDS );
+		set_transient( $cache_key, [ 'html' => $html, 'nf_form_id' => $nf_form_id, 'image_url' => $image_url, 'image_caption' => $image_caption ], 15 * MINUTE_IN_SECONDS );
 
 		if ( '' !== $image_url ) {
 			$html .= '<div class="clamp-event-image" style="text-align: center; margin: 0 0 20px;"><img src="' . esc_url( $image_url ) . '" alt="' . esc_attr__( 'Event image', 'clamp-events' ) . '" style="max-width: 100%; height: auto; display: inline-block;" /></div>';
+			if ( '' !== trim( (string) $image_caption ) ) {
+				$html .= '<div class="clamp-event-image-caption">' . esc_html( $image_caption ) . '</div>';
+			}
 		}
 		$html .= '<h2 style="text-align: center;">Indenture of Supper &amp; Settlement</h2>';
 		if ( $nf_form_id > 0 ) {
@@ -1594,7 +1644,7 @@ class Clamp_Events_iCal_Feed {
 
 		$html .= '</div>';
 
-		return $html;
+		return $caption_css . $html;
 	}
 
 	/**
